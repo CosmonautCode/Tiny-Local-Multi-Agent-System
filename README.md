@@ -89,7 +89,7 @@ The project uses UV for fast dependency resolution and virtual environment manag
 
 engine.py loads the Qwen2.5-1.5B model from the app/models/ directory using llama-cpp-python. The model is configured with:
 
-Context length: 2048 tokens
+Context length: 8192 tokens
 Threads: 8 (adjustable based on your CPU)
 Verbose mode: Off
 
