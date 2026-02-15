@@ -181,7 +181,7 @@ The uv.lock file ensures reproducible dependency resolution.
 
 
 # Download
-[![Download the latest release]](https://github.com/CosmonautCode/Tiny-Local-LLM-System)
+[![Download the latest release]]([https://github.com/CosmonautCode/Tiny-Local-LLM-System](https://github.com/CosmonautCode/Tiny-Local-Multi-Agent-System/tree/main))
 
 
 ## ⭐ Star this repo if you found it useful!
