@@ -1,16 +1,11 @@
 @echo off
+where uv >nul 2>nul
+if errorlevel 1 (
+    echo uv is not installed. Install it from https://docs.astral.sh/uv/ and re-run.
+    exit /b 1
+)
 
-pip install uv
-
-REM Activate Python environment if using venv
-call venv\Scripts\activate.bat
-
-REM Sync UV environment (if uv is a custom tool)
 uv sync
+if errorlevel 1 exit /b %errorlevel%
 
-
-REM Run the app
-uv run -m app.app
-
-REM Keep the window open (optional)
-pause
+uv run python -m app.app

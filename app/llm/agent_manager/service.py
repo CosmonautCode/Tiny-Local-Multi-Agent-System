@@ -1,69 +1,40 @@
 import json
-from pathlib import Path
-from app.llm.engine.service import load_multiple_instances
+
+from app.config import get_settings
+from app.llm.engine.service import load_llm
 
 
+class AgentManager:
+    """Owns the agent catalog and the shared Llama instance."""
 
-class AgentManager():
-    """Multi-expert system orchestrator for technical specification generation."""
     def __init__(self):
-        self.agents = []
-        self.llms = []
+        self.agents: list[dict] = []
+        self.llm = None
 
-    def load_agents(self):
-        """Load agents from config and initialize LLM instances."""
-        config_path = Path(__file__).parent / "agents.json"
-        with open(config_path, "r") as f:
-            config = json.load(f)
+    def load(self):
+        """Read agent catalog from disk and initialize a single LLM instance."""
+        path = get_settings().AGENTS_PATH
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+        except (OSError, json.JSONDecodeError) as e:
+            raise RuntimeError(f"Cannot load agents file {path}: {e}") from e
+        if "user_agents" not in config:
+            raise ValueError(f"Agents file missing 'user_agents' key: {path}")
         self.agents = config["user_agents"]
-        # Load only 1 LLM instance and reuse it for all agents (not one per agent)
-        self.llms = load_multiple_instances(1)
+        if not self.agents:
+            raise ValueError(f"Agents file has no agents: {path}")
+        self.llm = load_llm()
 
-    @staticmethod
-    def _estimate_tokens(text):
-        """Estimate tokens: ~4 chars per token (llama.cpp typical)."""
-        return max(1, len(text) // 4)
+    def find_synthesizer(self) -> dict:
+        """Return the synthesizer agent config or raise if missing."""
+        sid = get_settings().SYNTHESIZER_ID
+        for agent in self.agents:
+            if agent.get("id") == sid:
+                return agent
+        raise ValueError(f"Synthesizer agent id '{sid}' not found in agents catalog")
 
-    @staticmethod
-    def call_llm(llm, system_prompt: str, user_input: str, max_tokens: int, temperature: int, force_json=False):
-        """Unified LLM call method. Force JSON with completion prefix if needed."""
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_input}
-        ]
-        
-        if force_json:
-            messages.append({"role": "assistant", "content": "{"})
-        
-        output = llm.create_chat_completion(
-            messages=messages,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            top_p=0.9
-        )
-        
-        response = output["choices"][0]["message"]["content"].strip()
-        if force_json:
-            response = "{" + response
-        
-        usage = output.get("usage") or {}
-        est_tokens = usage.get("completion_tokens") or AgentManager._estimate_tokens(response)
-        return response, est_tokens
-
-    @staticmethod
-    def synthesize_report(llm, synthesizer_prompt, agent_opinions, token_budget=8192):
-        """Merge agent opinions into final technical specification."""
-        
-        summed_agent_tokens = sum(int(op.get('est_tokens', 0)) for op in agent_opinions)
-
-        max_synthesis_output = token_budget - summed_agent_tokens - 500
-
-        opinions_lines = [f"[{op['name']}] {op['response'][:200]}" for op in agent_opinions]
-        user_msg = "Synthesize expert opinions into technical spec:\n\n" + "\n\n".join(opinions_lines)
-
-        report, output_tokens = AgentManager.call_llm(
-            llm, synthesizer_prompt, user_msg, 
-            max_tokens=max_synthesis_output, temperature=0.0
-        )
-        
-        return report, summed_agent_tokens + output_tokens
+    def specialists(self) -> list[dict]:
+        """Return every agent except the synthesizer."""
+        sid = get_settings().SYNTHESIZER_ID
+        return [a for a in self.agents if a.get("id") != sid]

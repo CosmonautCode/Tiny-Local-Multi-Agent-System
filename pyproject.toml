@@ -1,9 +1,9 @@
 [project]
-name = "tiny-local-agent"
+name = "tiny-local-multi-agent-system"
 version = "0.1.0"
-description = "Add your description here"
+description = "Local multi-expert pipeline: user query -> spec extraction -> 11 expert opinions -> synthesized technical spec, all via one Qwen2.5-1.5B GGUF."
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.11"
 dependencies = [
     "diskcache==5.6.3",
     "jinja2==3.1.6",
@@ -11,9 +11,15 @@ dependencies = [
     "markdown-it-py==4.0.0",
     "markupsafe==3.0.3",
     "mdurl==0.1.2",
-    "numpy==2.4.2",                                                                                                                                                                                                      
+    "numpy>=1.26,<3",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.4",
     "pygments==2.19.2",
     "rich==14.3.2",
     "typing-extensions==4.15.0"
 ]
 
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
